@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sistema de Inventario</title>
+  <!--PAW-->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1d4ed8">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">📦 Sistema de Inventario</h1>
+
+    <!-- FORMULARIO PRODUCTOS -->
+    <div class="bg-white p-4 rounded-xl shadow mb-6">
+      <h2 class="text-xl font-semibold mb-4">➕ Cargar Producto</h2>
+      <div class="grid grid-cols-4 gap-4">
+        <input id="codigo" placeholder="Código" class="border p-2 rounded" />
+        <input id="nombre" placeholder="Producto" class="border p-2 rounded" />
+        <input id="cantidad" type="number" placeholder="Cantidad" class="border p-2 rounded" />
+        <input id="precio" type="number" placeholder="Precio" class="border p-2 rounded" />
+        <button onclick="agregarProducto()" class="bg-blue-600 text-white rounded">Guardar</button>
+      </div>
+    </div>
+
+    <!-- TABLA INVENTARIO -->
+    <div class="bg-white p-4 rounded-xl shadow mb-6">
+      <h2 class="text-xl font-semibold mb-4">📋 Inventario</h2>
+      <table class="w-full border">
+        <thead class="bg-gray-200">
+          <tr>
+            <th>Código</th>
+            <th>Producto</th>
+            <th>Stock</th>
+            <th>Vendidos</th>
+            <th>Precio</th>
+            <th>Total Vendido</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tabla"></tbody>
+      </table>
+    </div>
+
+    <!-- REPORTE -->
+<div class="bg-white p-4 rounded-xl shadow">
+  <h2 class="text-xl font-semibold mb-4">📊 Reporte</h2>
+
+  <p>Total de productos cargados: <b id="totalProductos">0</b></p>
+  <p>Total de unidades en stock: <b id="totalStock">0</b></p>
+  <p>Total de unidades vendidas: <b id="totalVendidos">0</b></p>
+  <p>Total general vendido: <b id="totalGeneralVendido">0</b></p>
+
+  <!-- BOTONES DE DESCARGA -->
+  <div class="flex gap-4 mt-4">
+    <button onclick="exportarExcel()" class="bg-green-600 text-white px-4 py-2 rounded">
+      Descargar Excel
+    </button>
+
+    <button onclick="exportarPDF()" class="bg-gray-800 text-white px-4 py-2 rounded">
+      Descargar PDF
+    </button>
+  </div>
+
+  <div class="mt-4">
+  <button onclick="limpiarInventario()"
+          class="bg-red-700 text-white px-4 py-2 rounded w-full">
+    🗑️ Limpiar Inventario
+  </button>
+</div>
+
+</div>
+
+  </div>
+
+<script>
+// 🔹 CARGAR INVENTARIO DESDE LOCALSTORAGE
+let inventario = JSON.parse(localStorage.getItem('inventario')) || [];
+
+// 🔹 NORMALIZAR DATOS VIEJOS
+inventario = inventario.map(p => ({
+  codigo: p.codigo,
+  nombre: p.nombre,
+  stock: p.stock ?? 0,
+  vendidos: p.vendidos ?? 0,
+  precio: p.precio ?? 0,
+  totalVendido: p.totalVendido ?? 0
+}));
+
+
+// 🔹 GUARDAR EN LOCALSTORAGE
+function guardar() {
+  localStorage.setItem('inventario', JSON.stringify(inventario));
+}
+
+function agregarProducto() {
+  const codigo = document.getElementById('codigo').value;
+  const nombre = document.getElementById('nombre').value;
+  const cantidad = parseInt(document.getElementById('cantidad').value);
+  const precio = parseFloat(document.getElementById('precio').value);
+
+  if (!codigo || !nombre || cantidad <= 0 || precio <= 0) {
+    alert('Complete todos los campos correctamente');
+    return;
+  }
+
+  inventario.push({
+    codigo,
+    nombre,
+    stock: cantidad,
+    vendidos: 0,
+    precio: precio,
+    totalVendido: 0
+  });
+
+  guardar();
+  limpiar();
+  render();
+}
+
+function vender(index) {
+  const producto = inventario[index];
+
+  if (producto.stock <= 0) {
+    alert('Sin stock');
+    return;
+  }
+
+  producto.stock--;
+  producto.vendidos++;
+  producto.totalVendido += producto.precio;
+
+  guardar();
+  render();
+}
+
+function render() {
+  const tabla = document.getElementById('tabla');
+  tabla.innerHTML = '';
+
+  let totalStock = 0;
+  let totalVendidos = 0;
+  let totalGeneralVendido = 0;
+
+  inventario.forEach((p, i) => {
+    totalStock += p.stock;
+    totalVendidos += p.vendidos;
+    totalGeneralVendido += p.totalVendido;
+
+    tabla.innerHTML += `
+      <tr class="text-center border">
+        <td>${p.codigo}</td>
+        <td>${p.nombre}</td>
+        <td>${p.stock}</td>
+        <td>${p.vendidos}</td>
+        <td>${p.precio.toFixed(2)}</td>
+        <td>${p.totalVendido.toFixed(2)}</td>
+        <td>
+          <button onclick="vender(${i})" class="bg-red-500 text-white px-2 rounded">
+            Vender
+          </button>
+        </td>
+      </tr>`;
+  });
+
+  document.getElementById('totalProductos').innerText = inventario.length;
+  document.getElementById('totalStock').innerText = totalStock;
+  document.getElementById('totalVendidos').innerText = totalVendidos;
+
+  // 🔹 Mostrar total general vendido
+  document.getElementById('totalGeneralVendido').innerText =
+    totalGeneralVendido.toFixed(2);
+}
+
+function limpiar() {
+  document.getElementById('codigo').value = '';
+  document.getElementById('nombre').value = '';
+  document.getElementById('cantidad').value = '';
+  document.getElementById('precio').value = '';
+}
+
+// 🔹 EXPORTAR A EXCEL
+function exportarExcel() {
+  let csv = 'Codigo,Producto,Stock,Vendidos,Precio,TotalVendido\n';
+
+  inventario.forEach(p => {
+    csv += `${p.codigo},${p.nombre},${p.stock},${p.vendidos},${p.precio},${p.totalVendido}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'reporte_inventario.csv';
+  link.click();
+}
+
+// 🔹 EXPORTAR A PDF
+function exportarPDF() {
+  let contenido = 'REPORTE DE INVENTARIO\n\n';
+
+  inventario.forEach(p => {
+    contenido += `${p.codigo} - ${p.nombre}\n`;
+    contenido += `Stock: ${p.stock} | Vendidos: ${p.vendidos}\n`;
+    contenido += `Precio: ${p.precio} | Total Vendido: ${p.totalVendido}\n\n`;
+  });
+
+  const ventana = window.open('', '', 'height=500,width=700');
+  ventana.document.write('<pre>' + contenido + '</pre>');
+  ventana.document.close();
+  ventana.print();
+}
+
+// 🔹 LIMPIAR INVENTARIO COMPLETO
+function limpiarInventario() {
+  const confirmar = confirm(
+    '⚠️ ATENCIÓN\n\nEsto borrará TODO el inventario y las ventas.\n¿Desea continuar?'
+  );
+
+  if (!confirmar) return;
+
+  inventario = [];
+  localStorage.removeItem('inventario');
+
+  render();
+}
+
+
+// 🔹 RENDER INICIAL
+render();
+</script>
+
+</body>
+</html>
