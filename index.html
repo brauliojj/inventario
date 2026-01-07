@@ -35,6 +35,7 @@
             <th>Código</th>
             <th>Producto</th>
             <th>Stock</th>
+            <th>Cargados</th>
             <th>Vendidos</th>
             <th>Precio</th>
             <th>Total Vendido</th>
@@ -85,6 +86,7 @@ inventario = inventario.map(p => ({
   codigo: p.codigo,
   nombre: p.nombre,
   stock: p.stock ?? 0,
+  cargados: p.cargados ?? (p.stock + p.vendidos),
   vendidos: p.vendidos ?? 0,
   precio: p.precio ?? 0,
   totalVendido: p.totalVendido ?? 0
@@ -107,21 +109,21 @@ function agregarProducto() {
     return;
   }
 
-  // 🔍 Buscar si el producto ya existe
   const productoExistente = inventario.find(p => p.codigo === codigo);
 
   if (productoExistente) {
-    // ✅ SUMAR STOCK AL EXISTENTE
+    // 🔹 SUMAR A CARGADOS Y STOCK
     productoExistente.stock += cantidad;
+    productoExistente.cargados += cantidad;
 
-    // Opcional: actualizar precio
+    // opcional: actualizar precio
     productoExistente.precio = precio;
   } else {
-    // ➕ Crear nuevo producto
     inventario.push({
       codigo,
       nombre,
       stock: cantidad,
+      cargados: cantidad, // 🔹 TOTAL CARGADO
       vendidos: 0,
       precio: precio,
       totalVendido: 0
@@ -132,6 +134,7 @@ function agregarProducto() {
   limpiar();
   render();
 }
+
 
 
 function vender(index) {
@@ -149,6 +152,7 @@ function vender(index) {
   guardar();
   render();
 }
+
 
 function render() {
   const tabla = document.getElementById('tabla');
@@ -168,6 +172,7 @@ function render() {
         <td>${p.codigo}</td>
         <td>${p.nombre}</td>
         <td>${p.stock}</td>
+        <td>${p.cargados}</td>
         <td>${p.vendidos}</td>
         <td>${p.precio.toFixed(2)}</td>
         <td>${p.totalVendido.toFixed(2)}</td>
