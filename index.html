@@ -177,9 +177,16 @@ function render() {
         <td>${p.precio.toFixed(2)}</td>
         <td>${p.totalVendido.toFixed(2)}</td>
         <td>
-          <button onclick="vender(${i})" class="bg-red-500 text-white px-2 rounded">
+          <button onclick="vender(${i})"
+            class="bg-red-500 text-white px-2 rounded mr-1">
             Vender
-          </button>
+        </button>
+
+        <button onclick="eliminarProducto(${i})"
+            class="bg-gray-700 text-white px-2 rounded">
+            Borrar
+        </button>
+
         </td>
       </tr>`;
   });
@@ -248,6 +255,23 @@ function limpiarInventario() {
 
 // 🔹 RENDER INICIAL
 render();
+
+// 🔹 ELIMINAR PRODUCTO
+function eliminarProducto(index) {
+  const producto = inventario[index];
+
+  const confirmar = confirm(
+    `⚠️ ATENCIÓN\n\n¿Desea eliminar el producto:\n"${producto.nombre}"?\n\nEsta acción no se puede deshacer.`
+  );
+
+  if (!confirmar) return;
+
+  inventario.splice(index, 1);
+
+  guardar();
+  render();
+}
+
 </script>
 
 </body>
