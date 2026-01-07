@@ -97,8 +97,8 @@ function guardar() {
 }
 
 function agregarProducto() {
-  const codigo = document.getElementById('codigo').value;
-  const nombre = document.getElementById('nombre').value;
+  const codigo = document.getElementById('codigo').value.trim();
+  const nombre = document.getElementById('nombre').value.trim();
   const cantidad = parseInt(document.getElementById('cantidad').value);
   const precio = parseFloat(document.getElementById('precio').value);
 
@@ -107,19 +107,32 @@ function agregarProducto() {
     return;
   }
 
-  inventario.push({
-    codigo,
-    nombre,
-    stock: cantidad,
-    vendidos: 0,
-    precio: precio,
-    totalVendido: 0
-  });
+  // 🔍 Buscar si el producto ya existe
+  const productoExistente = inventario.find(p => p.codigo === codigo);
+
+  if (productoExistente) {
+    // ✅ SUMAR STOCK AL EXISTENTE
+    productoExistente.stock += cantidad;
+
+    // Opcional: actualizar precio
+    productoExistente.precio = precio;
+  } else {
+    // ➕ Crear nuevo producto
+    inventario.push({
+      codigo,
+      nombre,
+      stock: cantidad,
+      vendidos: 0,
+      precio: precio,
+      totalVendido: 0
+    });
+  }
 
   guardar();
   limpiar();
   render();
 }
+
 
 function vender(index) {
   const producto = inventario[index];
