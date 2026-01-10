@@ -6,7 +6,8 @@
   <!--PAW-->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1d4ed8">
-  
+
+  <script src="https://phkmjooeubaungvbtiwf.supabase.co"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
@@ -86,8 +87,35 @@
   </div>
 
 <script>
+
+// 🔹 SUPABASE CONFIGURACIÓN
+const SUPABASE_URL = 'https://phkmjooeubaungvbtiwf.supabase.co';
+const SUPABASE_ANON_KEY = 'phkmjooeubaungvbtiwf';
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
 // 🔹 CARGAR INVENTARIO DESDE LOCALSTORAGE
-let inventario = JSON.parse(localStorage.getItem('inventario')) || [];
+let inventario = [];
+
+async function cargarProductos() {
+  const { data, error } = await supabase
+    .from('productos')
+    .select('*')
+    .order('nombre');
+
+  if (error) {
+    alert('Error cargando productos');
+    console.error(error);
+    return;
+  }
+
+  inventario = data;
+  cargarProductos();
+}
+
 
 // 🔹 NORMALIZAR DATOS VIEJOS
 inventario = inventario.map(p => ({
@@ -106,7 +134,7 @@ function guardar() {
   localStorage.setItem('inventario', JSON.stringify(inventario));
 }
 
-function agregarProducto() {
+async function agregarProducto() {
   const codigo = document.getElementById('codigo').value.trim();
   const nombre = document.getElementById('nombre').value.trim();
   const cantidad = parseInt(document.getElementById('cantidad').value);
@@ -117,48 +145,79 @@ function agregarProducto() {
     return;
   }
 
-  const productoExistente = inventario.find(p => p.codigo === codigo);
+  // Buscar si existe
+  const { data: existente } = await supabase
+    .from('productos')
+    .select('*')
+    .eq('codigo', codigo)
+    .single();
 
-  if (productoExistente) {
-    // 🔹 SUMAR A CARGADOS Y STOCK
-    productoExistente.stock += cantidad;
-    productoExistente.cargados += cantidad;
+  if (existente) {
+    // UPDATE
+    const { error } = await supabase
+      .from('productos')
+      .update({
+        stock: existente.stock + cantidad,
+        cargados: existente.cargados + cantidad,
+        precio: precio
+      })
+      .eq('id', existente.id);
 
-    // opcional: actualizar precio
-    productoExistente.precio = precio;
+    if (error) {
+      alert('Error actualizando producto');
+      console.error(error);
+      return;
+    }
   } else {
-    inventario.push({
-      codigo,
-      nombre,
-      stock: cantidad,
-      cargados: cantidad, // 🔹 TOTAL CARGADO
-      vendidos: 0,
-      precio: precio,
-      totalVendido: 0
-    });
+    // INSERT
+    const { error } = await supabase
+      .from('productos')
+      .insert({
+        codigo,
+        nombre,
+        stock: cantidad,
+        cargados: cantidad,
+        vendidos: 0,
+        precio,
+        total_vendido: 0
+      });
+
+    if (error) {
+      alert('Error insertando producto');
+      console.error(error);
+      return;
+    }
   }
 
-  guardar();
   limpiar();
-  render();
+  cargarProductos();
 }
 
 
+async function vender(index) {
+  const p = inventario[index];
 
-function vender(index) {
-  const producto = inventario[index];
-
-  if (producto.stock <= 0) {
+  if (p.stock <= 0) {
     alert('Sin stock');
     return;
   }
 
-  producto.stock--;
-  producto.vendidos++;
-  producto.totalVendido += producto.precio;
+  const { error } = await supabase
+    .from('productos')
+    .update({
+      stock: p.stock - 1,
+      vendidos: p.vendidos + 1,
+      total_vendido: p.total_vendido + p.precio
+    })
+    .eq('id', p.id);
 
-  guardar();
-  render();
+  if (error) {
+    alert('Error al vender');
+    console.error(error);
+    return;
+  }
+
+  cargarProductos();
 }
 
 
@@ -277,20 +336,25 @@ function limpiarInventario() {
 render();
 
 // 🔹 ELIMINAR PRODUCTO
-function eliminarProducto(index) {
-  const producto = inventario[index];
+async function eliminarProducto(index) {
+  const p = inventario[index];
 
-  const confirmar = confirm(
-    `⚠️ ATENCIÓN\n\n¿Desea eliminar el producto:\n"${producto.nombre}"?\n\nEsta acción no se puede deshacer.`
-  );
+  if (!confirm(`¿Eliminar ${p.nombre}?`)) return;
 
-  if (!confirmar) return;
+  const { error } = await supabase
+    .from('productos')
+    .delete()
+    .eq('id', p.id);
 
-  inventario.splice(index, 1);
+  if (error) {
+    alert('Error eliminando');
+    console.error(error);
+    return;
+  }
 
-  guardar();
-  render();
+  cargarProductos();
 }
+
 
 </script>
 
