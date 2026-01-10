@@ -12,8 +12,39 @@
 </head>
 <body class="bg-gray-100 p-6">
 
-  <div class="max-w-5xl mx-auto">
+  <!-- LOGIN -->
+<div id="loginView" class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="bg-white p-6 rounded-xl shadow w-full max-w-sm">
+    <h2 class="text-2xl font-bold mb-4 text-center">🔐 Iniciar sesión</h2>
+
+    <input id="loginEmail" type="email" placeholder="Email"
+      class="border p-2 rounded w-full mb-3" />
+
+    <input id="loginPassword" type="password" placeholder="Contraseña"
+      class="border p-2 rounded w-full mb-4" />
+
+    <button onclick="login()"
+      class="bg-blue-600 text-white w-full py-2 rounded mb-2">
+      Entrar
+    </button>
+
+    <button onclick="register()"
+      class="bg-gray-600 text-white w-full py-2 rounded">
+      Registrarse
+    </button>
+
+    <p id="loginError" class="text-red-600 text-sm mt-2 text-center"></p>
+  </div>
+</div>
+
+
+  <div id="appView" class="max-w-5xl mx-auto hidden">
     <h1 class="text-3xl font-bold mb-6">📦 Sistema de Inventario</h1>
+
+    <button onclick="logout()"
+      class="bg-red-600 text-white px-4 py-2 rounded mb-4">
+      🚪 Cerrar sesión
+    </button>
 
     <!-- FORMULARIO PRODUCTOS -->
     <div class="bg-white p-4 rounded-xl shadow mb-6">
@@ -339,6 +370,59 @@ async function eliminarProducto(index) {
   cargarProductos();
 }
 
+
+// 🔐 LOGIN
+async function login() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    document.getElementById('loginError').innerText = error.message;
+  }
+}
+
+// 🆕 REGISTRO
+async function register() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+
+  const { error } = await supabaseClient.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) {
+    document.getElementById('loginError').innerText = error.message;
+  } else {
+    document.getElementById('loginError').innerText =
+      'Registro exitoso. Revisá tu email.';
+  }
+}
+
+// 🚪 LOGOUT
+async function logout() {
+  await supabaseClient.auth.signOut();
+}
+
+// 🔎 CONTROL DE SESIÓN
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  const loginView = document.getElementById('loginView');
+  const appView = document.getElementById('appView');
+
+  if (session) {
+    loginView.classList.add('hidden');
+    appView.classList.remove('hidden');
+    cargarProductos();
+  } else {
+    appView.classList.add('hidden');
+    loginView.classList.remove('hidden');
+  }
+});
 
 </script>
 
