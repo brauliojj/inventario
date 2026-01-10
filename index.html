@@ -147,6 +147,10 @@ async function cargarProductos() {
   render();
 }
 
+async function obtenerUsuarioActual() {
+  const { data } = await supabaseClient.auth.getUser();
+  return data.user;
+}
 
 
 async function agregarProducto() {
@@ -211,13 +215,20 @@ async function agregarProducto() {
 
 async function vender(index) {
   const p = inventario[index];
+  const user = await obtenerUsuarioActual();
+
+  if (!user) {
+    alert('Usuario no autenticado');
+    return;
+  }
 
   if (p.stock <= 0) {
     alert('Sin stock');
     return;
   }
 
-  const { error } = await supabase
+  // 1️⃣ Actualizar producto
+  await supabaseClient
     .from('productos')
     .update({
       stock: p.stock - 1,
@@ -226,15 +237,19 @@ async function vender(index) {
     })
     .eq('id', p.id);
 
-  if (error) {
-    alert('Error al vender');
-    console.error(error);
-    return;
-  }
+  // 2️⃣ Registrar movimiento
+  await supabaseClient
+    .from('movimientos')
+    .insert({
+      producto_id: p.id,
+      usuario_id: user.id,
+      tipo: 'venta',
+      cantidad: 1,
+      monto: p.precio
+    });
 
   cargarProductos();
 }
-
 
 function render() {
   const tabla = document.getElementById('tabla');
