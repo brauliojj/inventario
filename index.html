@@ -7,7 +7,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1d4ed8">
 
-  <script src="https://phkmjooeubaungvbtiwf.supabase.co"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script><!--CONEXION A SUPABASE SDK-->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
@@ -90,7 +90,7 @@
 
 // 🔹 SUPABASE CONFIGURACIÓN
 const SUPABASE_URL = 'https://phkmjooeubaungvbtiwf.supabase.co';
-const SUPABASE_ANON_KEY = 'phkmjooeubaungvbtiwf';
+const SUPABASE_ANON_KEY = 'sb_secret_KEsAPbeYLXWDx_SJmYhGkA_sFHrZTfH';
 
 const supabase = window.supabase.createClient(
   SUPABASE_URL,
@@ -113,26 +113,10 @@ async function cargarProductos() {
   }
 
   inventario = data;
-  cargarProductos();
+  render();
 }
 
 
-// 🔹 NORMALIZAR DATOS VIEJOS
-inventario = inventario.map(p => ({
-  codigo: p.codigo,
-  nombre: p.nombre,
-  stock: p.stock ?? 0,
-  cargados: p.cargados ?? (p.stock + p.vendidos),
-  vendidos: p.vendidos ?? 0,
-  precio: p.precio ?? 0,
-  totalVendido: p.totalVendido ?? 0
-}));
-
-
-// 🔹 GUARDAR EN LOCALSTORAGE
-function guardar() {
-  localStorage.setItem('inventario', JSON.stringify(inventario));
-}
 
 async function agregarProducto() {
   const codigo = document.getElementById('codigo').value.trim();
