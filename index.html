@@ -373,40 +373,66 @@ async function eliminarProducto(index) {
 
 // 🔐 LOGIN
 async function login() {
-  const email = document.getElementById('loginEmail').value;
-  const password = document.getElementById('loginPassword').value;
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const errorBox = document.getElementById('loginError');
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
+  errorBox.innerText = '';
+
+  const { error } =
+    await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
 
   if (error) {
-    document.getElementById('loginError').innerText = error.message;
+    errorBox.innerText = error.message;
+    console.error(error);
   }
 }
 
 // 🆕 REGISTRO
 async function register() {
-  const email = document.getElementById('loginEmail').value;
-  const password = document.getElementById('loginPassword').value;
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const errorBox = document.getElementById('loginError');
 
-  const { error } = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: window.location.origin
-    }
-  });
+  errorBox.innerText = '';
 
-  if (error) {
-    document.getElementById('loginError').innerText = error.message;
-    console.error(error);
-  } else {
-    document.getElementById('loginError').innerText =
-      'Usuario registrado correctamente. Ahora podés iniciar sesión.';
+  if (!email || !password) {
+    errorBox.innerText = 'Email y contraseña son obligatorios';
+    return;
   }
+
+  // 1️⃣ Intentar login primero
+  const { error: loginError } =
+    await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+  if (!loginError) {
+    // Usuario ya existía y entró
+    return;
+  }
+
+  // 2️⃣ Si no existe, registrar
+  const { error: signupError } =
+    await supabaseClient.auth.signUp({
+      email,
+      password
+    });
+
+  if (signupError) {
+    errorBox.innerText = signupError.message;
+    console.error(signupError);
+    return;
+  }
+
+  errorBox.innerText =
+    'Usuario creado. Ahora podés iniciar sesión.';
 }
+
 
 
 // 🚪 LOGOUT
