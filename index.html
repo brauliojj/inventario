@@ -29,6 +29,14 @@
     <!-- TABLA INVENTARIO -->
     <div class="bg-white p-4 rounded-xl shadow mb-6">
       <h2 class="text-xl font-semibold mb-4">📋 Inventario</h2>
+      <input
+        id="buscador"
+        type="text"
+        placeholder="🔍 Buscar por código, nombre o precio"
+        class="border p-2 rounded w-full mb-4"
+        onkeyup="render()"
+      />
+
       <table class="w-full border">
         <thead class="bg-gray-200">
           <tr>
@@ -158,47 +166,59 @@ function render() {
   const tabla = document.getElementById('tabla');
   tabla.innerHTML = '';
 
+  const textoBusqueda = document
+    .getElementById('buscador')
+    ?.value
+    .toLowerCase() || '';
+
   let totalStock = 0;
   let totalVendidos = 0;
   let totalGeneralVendido = 0;
 
-  inventario.forEach((p, i) => {
-    totalStock += p.stock;
-    totalVendidos += p.vendidos;
-    totalGeneralVendido += p.totalVendido;
+  inventario
+    .filter(p => {
+      return (
+        p.codigo.toLowerCase().includes(textoBusqueda) ||
+        p.nombre.toLowerCase().includes(textoBusqueda) ||
+        p.precio.toString().includes(textoBusqueda)
+      );
+    })
+    .forEach((p, i) => {
 
-    tabla.innerHTML += `
-      <tr class="text-center border">
-        <td>${p.codigo}</td>
-        <td>${p.nombre}</td>
-        <td>${p.stock}</td>
-        <td>${p.cargados}</td>
-        <td>${p.vendidos}</td>
-        <td>${p.precio.toFixed(2)}</td>
-        <td>${p.totalVendido.toFixed(2)}</td>
-        <td>
-          <button onclick="vender(${i})"
-            class="bg-red-500 text-white px-2 rounded mr-1">
-            Vender
-        </button>
+      totalStock += p.stock;
+      totalVendidos += p.vendidos;
+      totalGeneralVendido += p.totalVendido;
 
-        <button onclick="eliminarProducto(${i})"
-            class="bg-gray-700 text-white px-2 rounded">
-            Borrar
-        </button>
+      tabla.innerHTML += `
+        <tr class="text-center border">
+          <td>${p.codigo}</td>
+          <td>${p.nombre}</td>
+          <td>${p.stock}</td>
+          <td>${p.cargados}</td>
+          <td>${p.vendidos}</td>
+          <td>${p.precio.toFixed(2)}</td>
+          <td>${p.totalVendido.toFixed(2)}</td>
+          <td>
+            <button onclick="vender(${i})"
+              class="bg-red-500 text-white px-2 rounded mr-1">
+              Vender
+            </button>
 
-        </td>
-      </tr>`;
-  });
+            <button onclick="eliminarProducto(${i})"
+              class="bg-gray-700 text-white px-2 rounded">
+              Borrar
+            </button>
+          </td>
+        </tr>`;
+    });
 
   document.getElementById('totalProductos').innerText = inventario.length;
   document.getElementById('totalStock').innerText = totalStock;
   document.getElementById('totalVendidos').innerText = totalVendidos;
-
-  // 🔹 Mostrar total general vendido
   document.getElementById('totalGeneralVendido').innerText =
     totalGeneralVendido.toFixed(2);
 }
+
 
 function limpiar() {
   document.getElementById('codigo').value = '';
