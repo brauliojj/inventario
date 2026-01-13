@@ -46,6 +46,22 @@
       🚪 Cerrar sesión
     </button>
 
+    <div id="adminPanel" class="bg-white p-4 rounded-xl shadow mb-6 hidden">
+  <h2 class="text-xl font-semibold mb-4">🧑‍💼 Administración de Usuarios</h2>
+
+  <table class="w-full border">
+    <thead class="bg-gray-200">
+      <tr>
+        <th>Email</th>
+        <th>Rol</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody id="tablaUsuarios"></tbody>
+  </table>
+</div>
+
+
     <!-- FORMULARIO PRODUCTOS -->
     <div class="bg-white p-4 rounded-xl shadow mb-6">
       <h2 class="text-xl font-semibold mb-4">➕ Cargar Producto</h2>
@@ -364,7 +380,7 @@ function render() {
     totalGeneralVendido.toFixed(2);
 
      // 👇 ESTA LÍNEA ES LA CLAVE
-  aplicarPermisosTabla();
+  //aplicarPermisosTabla();
 }
 
 
@@ -451,7 +467,7 @@ async function login() {
 
   errorBox.innerText = '';
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
+  const { error } = await supabaseClient.auth.signInWithPassword({
     email,
     password
   });
@@ -461,15 +477,27 @@ async function login() {
     return;
   }
 
-  // ✅ FORZAR CARGA DE LA APP
+  // 1️⃣ mostrar app
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('appView').classList.remove('hidden');
 
-  // ✅ cargar rol y datos
+  // 2️⃣ OBTENER ROL PRIMERO
   rolUsuario = await obtenerRolUsuario();
+  console.log('ROL:', rolUsuario);
+
+  // 3️⃣ aplicar permisos visuales
+  aplicarPermisosAdmin();
+
+  // 4️⃣ recién ahora renderizar datos
   await cargarProductos();
   await cargarHistorialVentas();
+
+  // 5️⃣ solo admin ve usuarios
+  if (rolUsuario === 'admin') {
+    await cargarUsuarios();
+  }
 }
+
 
 
 // 🆕 REGISTRO
@@ -519,17 +547,24 @@ async function register() {
 // 🚪 LOGOUT
 async function logout() {
   await supabaseClient.auth.signOut();
+
+  // 🔥 LIMPIEZA INMEDIATA DE UI
+  document.getElementById('appView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+
+  inventario = [];
+  rolUsuario = 'user';
 }
+
 
 // 🔎 CONTROL DE SESIÓN
 // 🔎 CONTROL DE SESIÓN — FORMA SEGURA SUPABASE v2
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  const loginView = document.getElementById('loginView');
-  const appView = document.getElementById('appView');
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  console.log('Auth event:', event);
 
   if (!session) {
-    appView.classList.add('hidden');
-    loginView.classList.remove('hidden');
+    document.getElementById('appView').classList.add('hidden');
+    document.getElementById('loginView').classList.remove('hidden');
   }
 });
 
@@ -609,54 +644,78 @@ function renderHistorialVentas(movimientos) {
  
 }
 
-
 async function obtenerRolUsuario() {
-  const { data: userData } = await supabaseClient.auth.getUser();
-  if (!userData?.user) return 'user';
+  const { data } = await supabaseClient.auth.getUser();
 
+  if (!data?.user) return 'user';
+
+  return data.user.user_metadata?.role || 'user';
+}
+
+
+function aplicarPermisosAdmin() {
+  const panel = document.getElementById('adminPanel');
+  if (rolUsuario === 'admin') {
+    panel.classList.remove('hidden');
+  } else {
+    panel.classList.add('hidden');
+  }
+}
+
+async function cargarUsuarios() {
   const { data, error } = await supabaseClient
     .from('profiles')
-    .select('role')
-    .eq('id', userData.user.id)
-    .maybeSingle();
+    .select('id, email, role')
+    .order('email');
 
-  if (error || !data) {
-    console.warn('Rol no encontrado, usando user');
-    return 'user';
+  if (error) {
+    console.error('Error cargando usuarios:', error);
+    return;
   }
 
-  return data.role;
+  renderUsuarios(data);
 }
 
+function renderUsuarios(usuarios) {
+  const tabla = document.getElementById('tablaUsuarios');
+  tabla.innerHTML = '';
 
-
-// 🚀 SESIÓN INICIAL (MUY IMPORTANTE)
-// 🚀 SESIÓN INICIAL (FORMA CORRECTA SUPABASE v2)
-(async () => {
-  const {
-    data: { session }
-  } = await supabaseClient.auth.getSession();
-
-  const loginView = document.getElementById('loginView');
-  const appView = document.getElementById('appView');
-
-  if (session) {
-    loginView.classList.add('hidden');
-    appView.classList.remove('hidden');
-
-    rolUsuario = await obtenerRolUsuario();
-    await cargarProductos();
-    await cargarHistorialVentas();
-  }
-})();
-
-function aplicarPermisosTabla() {
-  if (rolUsuario !== 'admin') {
-    document.querySelectorAll('[id^="btn-borrar-"]').forEach(btn => {
-      btn.classList.add('hidden');
-    });
-  }
+  usuarios.forEach(u => {
+    tabla.innerHTML += `
+      <tr class="text-center border">
+        <td>${u.email}</td>
+        <td>${u.role}</td>
+        <td>
+          <button
+            onclick="cambiarRol('${u.id}', '${u.role}')"
+            class="bg-blue-600 text-white px-2 rounded">
+            Cambiar rol
+          </button>
+        </td>
+      </tr>
+    `;
+  });
 }
+
+async function cambiarRol(userId, rolActual) {
+  const nuevoRol = rolActual === 'admin' ? 'user' : 'admin';
+
+  if (!confirm(`¿Cambiar rol a ${nuevoRol}?`)) return;
+
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ role: nuevoRol })
+    .eq('id', userId);
+
+  if (error) {
+    alert('Error cambiando rol');
+    console.error(error);
+    return;
+  }
+
+  cargarUsuarios();
+}
+
 
 </script>
 
