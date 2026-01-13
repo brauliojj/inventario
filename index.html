@@ -106,11 +106,48 @@
     </button>
   </div>
 
+  <div class="bg-white p-4 rounded-xl shadow mt-6">
+  <h2 class="text-xl font-semibold mb-4">📅 Historial de Ventas</h2>
+
+  <div class="flex gap-4 mb-4">
+  <input
+    type="date"
+    id="filtroFecha"
+    class="border p-2 rounded"
+    onchange="cargarHistorialVentas()"
+  />
+
+  <select
+    id="filtroPeriodo"
+    class="border p-2 rounded"
+    onchange="cargarHistorialVentas()"
+  >
+    <option value="">Todo</option>
+    <option value="mes">Este mes</option>
+    <option value="anio">Este año</option>
+  </select>
+</div>
+
+
+  <table class="w-full border">
+    <thead class="bg-gray-200">
+      <tr>
+        <th>Fecha</th>
+        <th>Cantidad vendida</th>
+        <th>Total vendido</th>
+      </tr>
+    </thead>
+    <tbody id="tablaHistorial"></tbody>
+  </table>
+</div>
+
+
   <div class="mt-4">
-  <button onclick="limpiarInventario()"
-          class="bg-red-700 text-white px-4 py-2 rounded w-full">
-    🗑️ Limpiar Inventario
-  </button>
+  <button id="btnLimpiarInventario"
+  onclick="limpiarInventario()"
+  class="bg-red-700 text-white px-4 py-2 rounded w-full">
+  🗑️ Limpiar Inventario
+</button>
 </div>
 
 </div>
@@ -130,6 +167,7 @@ const supabaseClient = window.supabase.createClient(
 
 // 🔹 CARGAR INVENTARIO DESDE LOCALSTORAGE
 let inventario = [];
+let rolUsuario = 'user';
 
 async function cargarProductos() {
   const { data, error } = await supabaseClient
@@ -257,6 +295,7 @@ if (error) {
 
 
 cargarProductos();
+cargarHistorialVentas(); // 👈 actualiza el historial al instante
 
 }
 
@@ -296,17 +335,25 @@ function render() {
           <td>${p.vendidos}</td>
           <td>${Number(p.precio || 0).toFixed(2)}</td>
           <td>${Number(p.total_vendido || 0).toFixed(2)}</td>
+          
           <td>
-            <button onclick="vender(${i})"
-              class="bg-red-500 text-white px-2 rounded mr-1">
-              Vender
-            </button>
+  <button onclick="vender(${i})"
+    class="bg-red-500 text-white px-2 rounded mr-1">
+    Vender
+  </button>
 
-            <button onclick="eliminarProducto(${i})"
-              class="bg-gray-700 text-white px-2 rounded">
-              Borrar
-            </button>
-          </td>
+  ${
+    rolUsuario === 'admin'
+      ? `<button
+            onclick="eliminarProducto(${i})"
+            class="bg-gray-700 text-white px-2 rounded">
+            Borrar
+         </button>`
+      : ''
+  }
+</td>
+      
+
         </tr>`;
     });
 
@@ -315,6 +362,9 @@ function render() {
   document.getElementById('totalVendidos').innerText = totalVendidos;
   document.getElementById('totalGeneralVendido').innerText =
     totalGeneralVendido.toFixed(2);
+
+     // 👇 ESTA LÍNEA ES LA CLAVE
+  aplicarPermisosTabla();
 }
 
 
@@ -371,8 +421,6 @@ function limpiarInventario() {
 }
 
 
-// 🔹 RENDER INICIAL
-render();
 
 // 🔹 ELIMINAR PRODUCTO
 async function eliminarProducto(index) {
@@ -403,17 +451,26 @@ async function login() {
 
   errorBox.innerText = '';
 
-  const { error } =
-    await supabaseClient.auth.signInWithPassword({
-      email,
-      password
-    });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
 
   if (error) {
     errorBox.innerText = error.message;
-    console.error(error);
+    return;
   }
+
+  // ✅ FORZAR CARGA DE LA APP
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+
+  // ✅ cargar rol y datos
+  rolUsuario = await obtenerRolUsuario();
+  await cargarProductos();
+  await cargarHistorialVentas();
 }
+
 
 // 🆕 REGISTRO
 async function register() {
@@ -465,19 +522,141 @@ async function logout() {
 }
 
 // 🔎 CONTROL DE SESIÓN
-supabaseClient.auth.onAuthStateChange((event, session) => {
+// 🔎 CONTROL DE SESIÓN — FORMA SEGURA SUPABASE v2
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  const loginView = document.getElementById('loginView');
+  const appView = document.getElementById('appView');
+
+  if (!session) {
+    appView.classList.add('hidden');
+    loginView.classList.remove('hidden');
+  }
+});
+
+
+async function cargarHistorialVentas() {
+  let query = supabaseClient
+    .from('movimientos')
+    .select('created_at, cantidad, precio')
+    .eq('tipo', 'venta')
+    .order('created_at', { ascending: false });
+
+  const fechaInput = document.getElementById('filtroFecha')?.value;
+  const periodo = document.getElementById('filtroPeriodo')?.value;
+
+  if (fechaInput) {
+    const inicio = new Date(fechaInput);
+    const fin = new Date(fechaInput);
+    fin.setHours(23, 59, 59);
+
+    query = query
+      .gte('created_at', inicio.toISOString())
+      .lte('created_at', fin.toISOString());
+  }
+
+  if (periodo === 'mes') {
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0);
+
+    query = query.gte('created_at', inicioMes.toISOString());
+  }
+
+  if (periodo === 'anio') {
+    const inicioAnio = new Date(new Date().getFullYear(), 0, 1);
+    query = query.gte('created_at', inicioAnio.toISOString());
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error cargando historial:', error);
+    return;
+  }
+
+  renderHistorialVentas(data);
+}
+
+function renderHistorialVentas(movimientos) {
+  const tabla = document.getElementById('tablaHistorial');
+  if (!tabla) return;
+
+  tabla.innerHTML = '';
+
+  const resumen = {};
+
+  movimientos.forEach(m => {
+    const fecha = new Date(m.created_at).toLocaleDateString('es-ES');
+
+    if (!resumen[fecha]) {
+      resumen[fecha] = { cantidad: 0, total: 0 };
+    }
+
+    resumen[fecha].cantidad += m.cantidad;
+    resumen[fecha].total += Number(m.precio) * Number(m.cantidad);
+  });
+
+  Object.entries(resumen).forEach(([fecha, datos]) => {
+    tabla.innerHTML += `
+      <tr class="text-center border">
+        <td>${fecha}</td>
+        <td>${datos.cantidad}</td>
+        <td>${datos.total.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+ 
+}
+
+
+async function obtenerRolUsuario() {
+  const { data: userData } = await supabaseClient.auth.getUser();
+  if (!userData?.user) return 'user';
+
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('role')
+    .eq('id', userData.user.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.warn('Rol no encontrado, usando user');
+    return 'user';
+  }
+
+  return data.role;
+}
+
+
+
+// 🚀 SESIÓN INICIAL (MUY IMPORTANTE)
+// 🚀 SESIÓN INICIAL (FORMA CORRECTA SUPABASE v2)
+(async () => {
+  const {
+    data: { session }
+  } = await supabaseClient.auth.getSession();
+
   const loginView = document.getElementById('loginView');
   const appView = document.getElementById('appView');
 
   if (session) {
     loginView.classList.add('hidden');
     appView.classList.remove('hidden');
-    cargarProductos();
-  } else {
-    appView.classList.add('hidden');
-    loginView.classList.remove('hidden');
+
+    rolUsuario = await obtenerRolUsuario();
+    await cargarProductos();
+    await cargarHistorialVentas();
   }
-});
+})();
+
+function aplicarPermisosTabla() {
+  if (rolUsuario !== 'admin') {
+    document.querySelectorAll('[id^="btn-borrar-"]').forEach(btn => {
+      btn.classList.add('hidden');
+    });
+  }
+}
 
 </script>
 
