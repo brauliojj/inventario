@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script><!--CONEXION A SUPABASE SDK-->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-6">
+<body class="bg-slate-100 min-h-screen">
 
   <!-- LOGIN -->
 <div id="loginView" class="min-h-screen flex items-center justify-center bg-gray-100">
@@ -37,45 +37,45 @@
   </div>
 </div>
 
+  <div id="appView" class="max-w-6xl mx-auto p-6 hidden">
+    
+    <div class="flex justify-between items-center mb-8">
+  <h1 class="text-3xl font-bold text-slate-800">
+    📦 Sistema de Inventario
+  </h1>
 
-  <div id="appView" class="max-w-5xl mx-auto hidden">
-    <h1 class="text-3xl font-bold mb-6">📦 Sistema de Inventario</h1>
+  <button onclick="logout()"
+    class="bg-red-500 hover:bg-red-600 transition text-white px-4 py-2 rounded-lg shadow">
+    🚪 Cerrar sesión
+  </button>
+</div>
 
-    <button onclick="logout()"
-      class="bg-red-600 text-white px-4 py-2 rounded mb-4">
-      🚪 Cerrar sesión
-    </button>
 
     <div id="adminPanel" class="bg-white p-4 rounded-xl shadow mb-6 hidden">
-  <h2 class="text-xl font-semibold mb-4">🧑‍💼 Administración de Usuarios</h2>
+  <h2 class="text-xl font-semibold mb-4">🧑‍💼 Bienvenido</h2>
 
-  <table class="w-full border">
-    <thead class="bg-gray-200">
-      <tr>
-        <th>Email</th>
-        <th>Rol</th>
-        <th>Acción</th>
-      </tr>
-    </thead>
-    <tbody id="tablaUsuarios"></tbody>
-  </table>
 </div>
 
 
     <!-- FORMULARIO PRODUCTOS -->
-    <div class="bg-white p-4 rounded-xl shadow mb-6">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
       <h2 class="text-xl font-semibold mb-4">➕ Cargar Producto</h2>
       <div class="grid grid-cols-4 gap-4">
         <input id="codigo" placeholder="Código" class="border p-2 rounded" />
         <input id="nombre" placeholder="Producto" class="border p-2 rounded" />
         <input id="cantidad" type="number" placeholder="Cantidad" class="border p-2 rounded" />
         <input id="precio" type="number" placeholder="Precio" class="border p-2 rounded" />
-        <button onclick="agregarProducto()" class="bg-blue-600 text-white rounded">Guardar</button>
+        <button
+            onclick="agregarProducto()"
+            class="bg-blue-600 hover:bg-blue-700 transition text-white rounded-lg shadow px-4 py-2">
+            Guardar
+          </button>
+
       </div>
     </div>
 
     <!-- TABLA INVENTARIO -->
-    <div class="bg-white p-4 rounded-xl shadow mb-6">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
       <h2 class="text-xl font-semibold mb-4">📋 Inventario</h2>
       <input
         id="buscador"
@@ -85,7 +85,7 @@
         onkeyup="render()"
       />
 
-      <table class="w-full border">
+      <table class="w-full border-collapse overflow-hidden rounded-xl">
         <thead class="bg-gray-200">
           <tr>
             <th>Código</th>
