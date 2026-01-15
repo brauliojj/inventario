@@ -158,14 +158,6 @@
 </div>
 
 
-  <div class="mt-4">
-  <button id="btnLimpiarInventario"
-  onclick="limpiarInventario()"
-  class="bg-red-700 text-white px-4 py-2 rounded w-full">
-  🗑️ Limpiar Inventario
-</button>
-</div>
-
 </div>
 
   </div>
@@ -420,20 +412,6 @@ function exportarPDF() {
   ventana.document.write('<pre>' + contenido + '</pre>');
   ventana.document.close();
   ventana.print();
-}
-
-// 🔹 LIMPIAR INVENTARIO COMPLETO
-function limpiarInventario() {
-  const confirmar = confirm(
-    '⚠️ ATENCIÓN\n\nEsto borrará TODO el inventario y las ventas.\n¿Desea continuar?'
-  );
-
-  if (!confirmar) return;
-
-  inventario = [];
-  localStorage.removeItem('inventario');
-
-  render();
 }
 
 
