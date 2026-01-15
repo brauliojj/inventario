@@ -623,10 +623,21 @@ function renderHistorialVentas(movimientos) {
 
 async function obtenerRolUsuario() {
   const { data } = await supabaseClient.auth.getUser();
-
   if (!data?.user) return 'user';
 
-  return data.user.user_metadata?.role || 'user';
+  const email = data.user.email;
+
+  // 👑 ADMINS FIJOS
+  const admins = [
+    'brauliojarajara@gmail.com',
+    'arielrodas@hotmail.com'
+  ];
+
+  if (admins.includes(email)) {
+    return 'admin';
+  }
+
+  return 'user';
 }
 
 
